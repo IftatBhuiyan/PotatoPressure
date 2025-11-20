@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Potato Pressure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&display=swap');
+      body {
+        font-family: 'Fredoka', sans-serif;
+        background-color: #1a202c;
+        color: white;
+        overflow: hidden; /* Prevent scrolling in game */
+      }
+      .card-shadow {
+        box-shadow: 2px 4px 6px rgba(0,0,0,0.3);
+      }
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+
+      /* Card Deal Animation */
+      @keyframes deal-card {
+        0% {
+          opacity: 0;
+          transform: translateY(-200px) scale(0.2) rotate(10deg);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1) rotate(0deg);
+        }
+      }
+
+      .animate-deal {
+        animation: deal-card 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
