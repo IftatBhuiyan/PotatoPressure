@@ -378,14 +378,19 @@ export const GameBoard: React.FC = () => {
                         className={`
                       w-32 h-48 bg-slate-700 rounded-xl border-4 border-slate-600 shadow-2xl 
                       flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-transform
-                      relative group
+                      relative group overflow-hidden
                       ${state.turnPhase === 'awaitingAction' ? 'ring-4 ring-blue-400 animate-pulse' : ''}
                   `}
                     >
-                        <div className="absolute inset-1 border-2 border-dashed border-slate-500 rounded-lg"></div>
-                        <span className="text-4xl mb-1 group-hover:scale-110 transition-transform">🎴</span>
-                        <span className="text-sm font-bold text-slate-400">DECK</span>
-                        <span className="text-xs font-bold text-slate-500 mt-1">{state.deck.length} left</span>
+                        <img
+                            src="/card_back.png"
+                            alt="Deck"
+                            className="w-full h-full object-cover absolute inset-0"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center z-10">
+                            <span className="text-sm font-bold text-white drop-shadow-md">DECK</span>
+                            <span className="text-xs font-bold text-white/80 mt-1 drop-shadow-md">{state.deck.length} left</span>
+                        </div>
                     </div>
 
                     {/* Discard */}
