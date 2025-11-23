@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../state/store';
 import { Card } from './Card';
+import { DebugPanel } from './DebugPanel';
 import { Card as CardType, PlayerState } from '../types';
 
 // --- Sub-components ---
@@ -11,6 +12,7 @@ const Lobby = () => {
 
     return (
         <div className="flex flex-col items-center justify-center h-full space-y-6 bg-slate-900 text-white">
+            <DebugPanel />
             <h1 className="text-6xl font-black text-yellow-500 tracking-tighter">POTATO PRESSURE</h1>
             <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 w-96">
                 <div className="space-y-4 mb-6">
@@ -290,6 +292,7 @@ export const GameBoard: React.FC = () => {
 
     return (
         <div className="relative w-full h-full bg-slate-900 overflow-hidden flex flex-col">
+            <DebugPanel />
 
             {/* Top Bar */}
             <div className="absolute top-0 left-0 right-0 h-16 bg-slate-950/50 backdrop-blur flex items-center justify-between px-6 z-40 border-b border-white/10">

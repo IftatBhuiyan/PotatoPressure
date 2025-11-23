@@ -82,22 +82,43 @@ export interface GameState {
   };
 }
 
-export interface GameAction {
-  type:
-  | "JOIN_GAME"
-  | "REMOVE_PLAYER"
-  | "START_GAME"
-  | "DRAW_EXECUTE" // Helper to draw 1 card
-  | "PLAY_CARD_INIT"
-  | "SELECT_TARGET"
-  | "RESPOND_TO_PASS" // Payload: 'REFLECT' | 'PASS_FORWARD' | 'DECLINE'
-  | "RESOLVE_REACTION_TARGET" // Payload: targetId
-  | "SELECT_FOOD_FIGHT_CARD" // Payload: { playerId, cardId }
-  | "CANCEL_PLAY"
-  | "DISCARD_CARD"
-  | "SKIP_POST_ACTION" // For skipping offensive Quick Pass
-  | "END_TURN"
-  | "RESTART"
-  | "DEBUG_ADD_CARD"; // Payload: { playerId: string, cardName: CardName }
-  payload?: any;
+export type GameAction =
+  | { type: "JOIN_GAME"; payload?: { playerId: string; playerName: string } }
+  | { type: "REMOVE_PLAYER"; payload: { playerId: string } }
+  | { type: "START_GAME"; payload?: { config?: DeckConfig; initialHands?: Record<number, string[]>; playerCount?: number } }
+  | { type: "DRAW_EXECUTE"; payload: number }
+  | { type: "PLAY_CARD_INIT"; payload: string }
+  | { type: "SELECT_TARGET"; payload: string }
+  | { type: "RESPOND_TO_PASS"; payload: 'REFLECT' | 'PASS_FORWARD' | 'DECLINE' | boolean }
+  | { type: "RESOLVE_REACTION_TARGET"; payload: string }
+  | { type: "SELECT_FOOD_FIGHT_CARD"; payload: { playerId: string; cardId: string } }
+  | { type: "CANCEL_PLAY"; payload?: undefined }
+  | { type: "DISCARD_CARD"; payload: string }
+  | { type: "SKIP_POST_ACTION"; payload?: undefined }
+  | { type: "END_TURN"; payload?: undefined }
+  | { type: "RESTART"; payload?: undefined }
+  | { type: 'DEBUG_ADD_CARD'; payload: { playerId: string; cardName: string } }
+  | { type: 'DEBUG_DRAW_SPECIFIC'; payload: { playerId: string; cardName: string } }
+  | { type: 'LOAD_SNAPSHOT'; payload: Snapshot };
+
+
+export interface DeckConfig {
+  redCount: number;    // Movement
+  blueCount: number;   // Defense
+  greenCount: number;  // Toppings (per type)
+  yellowCount: number; // Chaos
+  potatoCount: number; // Potatoes
+
+  // Advanced Mode
+  advancedMode?: boolean;
+  cardCounts?: Record<string, number>; // Specific overrides per card name
+}
+
+export interface Snapshot {
+  name: string;
+  date: number;
+  config: DeckConfig;
+  playerCount: number;
+  initialHands?: Record<number, string[]>; // Player Index -> List of Card Names
+  gameState?: GameState; // For mid-game saves
 }

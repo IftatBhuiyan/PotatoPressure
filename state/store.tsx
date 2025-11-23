@@ -26,16 +26,50 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
     switch (action.type) {
         case 'JOIN_GAME': {
             if (state.status !== 'LOBBY') return state;
-            const newPlayer = { id: `p-${state.players.length}`, name: action.payload, isAlive: true, hand: [] };
+            const payload = action.payload || { playerId: `p-${state.players.length}`, playerName: `Player ${state.players.length + 1}` };
+            const newPlayer = { id: payload.playerId, name: payload.playerName, isAlive: true, hand: [] };
             return { ...state, players: [...state.players, newPlayer] };
         }
         case 'REMOVE_PLAYER': {
             if (state.status !== 'LOBBY') return state;
-            return { ...state, players: state.players.filter(p => p.id !== action.payload) };
+            return { ...state, players: state.players.filter(p => p.id !== action.payload.playerId) };
         }
         case 'START_GAME': {
-            if (state.players.length < 2) return state;
-            const { players, potatoes, deck } = Deck.dealGame(state.players.map(p => p.name));
+            // Allow starting with 1 player for debug if needed, but usually 2
+            // "add feature so we can select the amount of players"
+            // If payload has playerCount, we should probably setup dummy players if they don't exist?
+            // Or just rely on Lobby to add them?
+            // The DebugPanel will likely dispatch JOIN_GAME multiple times or we can handle it here.
+            // Let's assume DebugPanel handles player creation via JOIN_GAME loops, OR we can do it here.
+            // "creates those players" -> implies we might want to force set players.
+
+            const config = action.payload?.config;
+            const initialHands = action.payload?.initialHands;
+            const targetPlayerCount = action.payload?.playerCount;
+
+            let currentPlayers = [...state.players];
+
+            // If target player count is specified, adjust players
+            if (targetPlayerCount) {
+                // If we have too many, remove
+                if (currentPlayers.length > targetPlayerCount) {
+                    currentPlayers = currentPlayers.slice(0, targetPlayerCount);
+                }
+                // If we have too few, add
+                while (currentPlayers.length < targetPlayerCount) {
+                    currentPlayers.push({
+                        id: `p-${currentPlayers.length}`,
+                        name: `Player ${currentPlayers.length + 1}`,
+                        isAlive: true,
+                        hand: []
+                    });
+                }
+            }
+
+            if (currentPlayers.length < 2) return state;
+
+            const { players, potatoes, deck } = Deck.dealGame(currentPlayers.map(p => p.name), config, initialHands);
+
             return {
                 ...state,
                 status: 'PLAYING',
@@ -528,6 +562,32 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
                 ...state,
                 players: state.players.map(p => p.id === playerId ? { ...p, hand: [...p.hand, newCard] } : p)
             };
+        }
+
+        case 'DEBUG_DRAW_SPECIFIC': {
+            const { playerId, cardName } = action.payload;
+            const result = Engine.drawSpecificCard(state, playerId, cardName);
+            if (!result.card) {
+                return { ...state, notification: `Could not find ${cardName} in Deck/Discard!` };
+            }
+            return result.state;
+        }
+
+        case 'LOAD_SNAPSHOT': {
+            const snapshot = action.payload;
+            if (snapshot.gameState) {
+                return snapshot.gameState;
+            }
+            // If just config/setup, we might need to trigger START_GAME with it?
+            // But usually LOAD_SNAPSHOT implies loading a full state or a setup.
+            // If it's a setup snapshot, we just return to Lobby?
+            // Or we can't easily "load setup" into state without logic.
+            // Let's assume for now we only support full GameState snapshots OR we handle setup in UI.
+            // Actually, the prompt says "save the selections... load a snapshot of the settings".
+            // So we probably just load the settings into the DebugPanel, not the GameState directly?
+            // Unless we saved a mid-game state.
+            // If payload is a GameState, use it.
+            return state;
         }
 
         default:

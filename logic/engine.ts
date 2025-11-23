@@ -4,72 +4,134 @@ import { EXPLOSION_BASE } from '../constants';
 import { shuffle } from './deck';
 
 export const getNextPlayerId = (state: GameState): string => {
-  const activePlayers = state.players; 
-  const currentIndex = activePlayers.findIndex(p => p.id === state.currentPlayerId);
-  if (currentIndex === -1) return state.currentPlayerId;
+    const activePlayers = state.players;
+    const currentIndex = activePlayers.findIndex(p => p.id === state.currentPlayerId);
+    if (currentIndex === -1) return state.currentPlayerId;
 
-  let step = state.direction === 'clockwise' ? 1 : -1;
-  let nextIndex = currentIndex;
-  
-  // Find next ALIVE player
-  for (let i = 0; i < activePlayers.length; i++) {
-      nextIndex = (nextIndex + step) % activePlayers.length;
-      if (nextIndex < 0) nextIndex += activePlayers.length;
-      if (activePlayers[nextIndex].isAlive) return activePlayers[nextIndex].id;
-  }
-  return state.currentPlayerId;
+    let step = state.direction === 'clockwise' ? 1 : -1;
+    let nextIndex = currentIndex;
+
+    // Find next ALIVE player
+    for (let i = 0; i < activePlayers.length; i++) {
+        nextIndex = (nextIndex + step) % activePlayers.length;
+        if (nextIndex < 0) nextIndex += activePlayers.length;
+        if (activePlayers[nextIndex].isAlive) return activePlayers[nextIndex].id;
+    }
+    return state.currentPlayerId;
 };
 
 export const drawCardLogic = (state: GameState, playerId: string): { state: GameState, card: Card | null } => {
-  let newDeck = [...state.deck];
-  let newDiscard = [...state.discard];
-  let newPotatoes = [...state.potatoes];
-  let playerIndex = state.players.findIndex(p => p.id === playerId);
-  
-  if (newDeck.length === 0) {
-    if (newDiscard.length === 0) return { state, card: null };
-    // Use Fisher-Yates shuffle for fair distribution
-    newDeck = shuffle(newDiscard);
-    newDiscard = [];
-  }
+    let newDeck = [...state.deck];
+    let newDiscard = [...state.discard];
+    let newPotatoes = [...state.potatoes];
+    let playerIndex = state.players.findIndex(p => p.id === playerId);
 
-  const card = newDeck.pop();
-  if (!card) return { state, card: null };
+    if (newDeck.length === 0) {
+        if (newDiscard.length === 0) return { state, card: null };
+        // Use Fisher-Yates shuffle for fair distribution
+        newDeck = shuffle(newDiscard);
+        newDiscard = [];
+    }
 
-  const newPlayers = [...state.players];
-  const player = newPlayers[playerIndex];
+    const card = newDeck.pop();
+    if (!card) return { state, card: null };
 
-  // Logic update: Potato or not, it goes into the hand.
-  newPlayers[playerIndex] = {
-      ...player,
-      hand: [...player.hand, card]
-  };
+    const newPlayers = [...state.players];
+    const player = newPlayers[playerIndex];
 
-  if (card.category === 'potato') {
-      // SYNC LOGIC: New potato gets the count of the highest existing potato
-      const maxExistingCount = newPotatoes.length > 0 
-        ? Math.max(...newPotatoes.map(p => p.toppingCount)) 
-        : 0;
+    // Logic update: Potato or not, it goes into the hand.
+    newPlayers[playerIndex] = {
+        ...player,
+        hand: [...player.hand, card]
+    };
 
-      // Initialize Potato State
-      newPotatoes.push({
-          id: card.id,
-          toppingCount: maxExistingCount, // Syncs with game time
-          holderId: playerId,
-          isFrozen: false
-      });
-  }
+    if (card.category === 'potato') {
+        // SYNC LOGIC: New potato gets the count of the highest existing potato
+        const maxExistingCount = newPotatoes.length > 0
+            ? Math.max(...newPotatoes.map(p => p.toppingCount))
+            : 0;
 
-  return {
-      state: {
-          ...state,
-          deck: newDeck,
-          discard: newDiscard,
-          players: newPlayers,
-          potatoes: newPotatoes
-      },
-      card
-  };
+        // Initialize Potato State
+        newPotatoes.push({
+            id: card.id,
+            toppingCount: maxExistingCount, // Syncs with game time
+            holderId: playerId,
+            isFrozen: false
+        });
+    }
+
+    return {
+        state: {
+            ...state,
+            deck: newDeck,
+            discard: newDiscard,
+            players: newPlayers,
+            potatoes: newPotatoes
+        },
+        card
+    };
+};
+
+export const drawSpecificCard = (state: GameState, playerId: string, cardName: string): { state: GameState, card: Card | null } => {
+    // 1. Search in Deck
+    let cardIndex = state.deck.findIndex(c => c.name === cardName);
+    let source = 'deck';
+
+    // 2. If not in Deck, search in Discard
+    if (cardIndex === -1) {
+        cardIndex = state.discard.findIndex(c => c.name === cardName);
+        source = 'discard';
+    }
+
+    // 3. If nowhere, return null (or maybe create one?)
+    if (cardIndex === -1) return { state, card: null };
+
+    let newDeck = [...state.deck];
+    let newDiscard = [...state.discard];
+    let card: Card;
+
+    if (source === 'deck') {
+        card = newDeck[cardIndex];
+        newDeck.splice(cardIndex, 1);
+    } else {
+        card = newDiscard[cardIndex];
+        newDiscard.splice(cardIndex, 1);
+    }
+
+    const playerIndex = state.players.findIndex(p => p.id === playerId);
+    const newPlayers = [...state.players];
+    const player = newPlayers[playerIndex];
+
+    newPlayers[playerIndex] = {
+        ...player,
+        hand: [...player.hand, card]
+    };
+
+    // Handle Potato Logic if we force-drew a potato
+    let newPotatoes = [...state.potatoes];
+    if (card.category === 'potato') {
+        const maxExistingCount = newPotatoes.length > 0
+            ? Math.max(...newPotatoes.map(p => p.toppingCount))
+            : 0;
+
+        newPotatoes.push({
+            id: card.id,
+            toppingCount: maxExistingCount,
+            holderId: playerId,
+            isFrozen: false
+        });
+    }
+
+    return {
+        state: {
+            ...state,
+            deck: newDeck,
+            discard: newDiscard,
+            players: newPlayers,
+            potatoes: newPotatoes
+        },
+        card
+    };
 };
 
 export const transferPotato = (state: GameState, potatoId: string, toPlayerId: string): GameState => {
@@ -84,7 +146,7 @@ export const transferPotato = (state: GameState, potatoId: string, toPlayerId: s
     // 2.5 Handle Self-Transfer (Reflection)
     if (currentOwner.id === toPlayerId) {
         // Potato stays in hand, just ensure State owner ID matches (it should already, but for safety)
-        const newPotatoes = state.potatoes.map(pot => 
+        const newPotatoes = state.potatoes.map(pot =>
             pot.id === potatoId ? { ...pot, holderId: toPlayerId } : pot
         );
         return { ...state, potatoes: newPotatoes };
@@ -102,7 +164,7 @@ export const transferPotato = (state: GameState, potatoId: string, toPlayerId: s
     });
 
     // 4. Update Potato State owner
-    const newPotatoes = state.potatoes.map(pot => 
+    const newPotatoes = state.potatoes.map(pot =>
         pot.id === potatoId ? { ...pot, holderId: toPlayerId } : pot
     );
 
@@ -114,17 +176,17 @@ export const transferPotato = (state: GameState, potatoId: string, toPlayerId: s
 };
 
 export const checkExplosion = (state: GameState): { exploded: boolean, state: GameState } => {
-  const livingCount = state.players.filter(p => p.isAlive).length;
-  const threshold = EXPLOSION_BASE + livingCount;
-  
-  const exploded = state.potatoes.some(p => p.toppingCount >= threshold);
-  
-  if (!exploded) return { exploded: false, state };
-  
-  return {
-      exploded: true,
-      state
-  };
+    const livingCount = state.players.filter(p => p.isAlive).length;
+    const threshold = EXPLOSION_BASE + livingCount;
+
+    const exploded = state.potatoes.some(p => p.toppingCount >= threshold);
+
+    if (!exploded) return { exploded: false, state };
+
+    return {
+        exploded: true,
+        state
+    };
 };
 
 export const respawnPotato = (state: GameState): GameState => {
@@ -132,7 +194,7 @@ export const respawnPotato = (state: GameState): GameState => {
     let potatoCard = state.deck.find(c => c.category === 'potato');
     let newDeck = [...state.deck];
     let newDiscard = [...state.discard];
-    
+
     if (potatoCard) {
         newDeck = newDeck.filter(c => c.id !== potatoCard!.id);
     } else {
@@ -176,15 +238,15 @@ export const resolveFoodFight = (state: GameState): GameState => {
     const alivePlayers = state.players.filter(p => p.isAlive);
     const N = alivePlayers.length;
     const shift = state.direction === 'clockwise' ? 1 : -1;
-    
+
     const extractionMap: Record<string, Card> = {}; // playerId -> Card
-    
-    let newPlayers = state.players.map(p => ({...p})); // clone
-    
+
+    let newPlayers = state.players.map(p => ({ ...p })); // clone
+
     alivePlayers.forEach(p => {
         const cardId = state.foodFightSelections[p.id];
-        if (!cardId) return; 
-        
+        if (!cardId) return;
+
         const card = p.hand.find(c => c.id === cardId);
         if (card) {
             extractionMap[p.id] = card;
@@ -193,21 +255,21 @@ export const resolveFoodFight = (state: GameState): GameState => {
             newPlayers[pIndex].hand = newPlayers[pIndex].hand.filter(c => c.id !== cardId);
         }
     });
-    
+
     // Insert into neighbor's hand
     alivePlayers.forEach((p, i) => {
         const card = extractionMap[p.id];
         if (!card) return;
-        
+
         let neighborIndex = (i + shift) % N;
         if (neighborIndex < 0) neighborIndex += N;
-        
+
         const neighbor = alivePlayers[neighborIndex];
-        
+
         const neighborMainIndex = newPlayers.findIndex(np => np.id === neighbor.id);
         newPlayers[neighborMainIndex].hand = [...newPlayers[neighborMainIndex].hand, card];
     });
-    
+
     const newPotatoes = state.potatoes.map(pot => {
         const holder = newPlayers.find(p => p.hand.some(c => c.id === pot.id));
         return holder ? { ...pot, holderId: holder.id } : pot;
